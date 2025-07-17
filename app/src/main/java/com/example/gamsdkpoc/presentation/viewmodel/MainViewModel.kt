@@ -115,23 +115,33 @@ class MainViewModel @Inject constructor(
     }
 
     fun onUserAction(action: UserAction) {
+        AppTracer.traceUserAction(
+            action = action::class.java.simpleName,
+            component = "MainViewModel",
+            additionalData = mapOf("action_type" to action.toString())
+        )
+        
         when (action) {
             is UserAction.LoadBannerAd -> {
+                AppTracer.traceStateChange("BannerAd", _bannerAdState.value::class.java.simpleName, "LOADING")
                 AppTracer.startTrace("UserAction_LoadBanner")
                 loadBannerAd()
                 AppTracer.stopTrace("UserAction_LoadBanner")
             }
             is UserAction.LoadInterstitialAd -> {
+                AppTracer.traceStateChange("InterstitialAd", _interstitialAdState.value::class.java.simpleName, "LOADING")
                 AppTracer.startTrace("UserAction_LoadInterstitial")
                 loadInterstitialAd()
                 AppTracer.stopTrace("UserAction_LoadInterstitial")
             }
             is UserAction.ShowInterstitialAd -> {
+                AppTracer.traceStateChange("InterstitialAd", "LOADED", "SHOWING")
                 AppTracer.startTrace("UserAction_ShowInterstitial")
                 showInterstitialAd()
                 AppTracer.stopTrace("UserAction_ShowInterstitial")
             }
             is UserAction.ClearMessage -> {
+                AppTracer.traceStateChange("UIMessage", "VISIBLE", "CLEARED")
                 AppTracer.startTrace("UserAction_ClearMessage")
                 _uiState.value = _uiState.value.copy(showMessage = null)
                 AppTracer.stopTrace("UserAction_ClearMessage")

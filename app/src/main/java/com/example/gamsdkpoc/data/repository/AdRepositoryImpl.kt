@@ -46,6 +46,16 @@ class AdRepositoryImpl @Inject constructor(
     }
     
     fun setCurrentActivity(activity: Activity?) {
+        AppTracer.traceStateChange(
+            context = "AdRepository",
+            fromState = currentActivity?.javaClass?.simpleName,
+            toState = activity?.javaClass?.simpleName ?: "null",
+            additionalData = mapOf(
+                "previous_activity" to (currentActivity?.javaClass?.simpleName ?: "null"),
+                "new_activity" to (activity?.javaClass?.simpleName ?: "null")
+            )
+        )
+        
         AppTracer.startTrace("Repository_SetActivity", mapOf(
             "activity" to (activity?.javaClass?.simpleName ?: "null")
         ))
@@ -84,6 +94,11 @@ class AdRepositoryImpl @Inject constructor(
                     override fun onAdLoaded() {
                         val callbackThread = Thread.currentThread()
                         android.util.Log.d("AD_THREAD", "Banner onAdLoaded() callback on thread: ${callbackThread.name} (ID: ${callbackThread.id})")
+                        
+                        AppTracer.traceStateChange("BannerAd", "LOADING", "LOADED", mapOf(
+                            "ad_type" to adConfig.adType.name,
+                            "callback_thread" to callbackThread.name
+                        ))
                         
                         AppTracer.startTrace("BannerAd_OnLoaded", mapOf(
                             "callback_thread" to callbackThread.name,
