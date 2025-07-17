@@ -9,74 +9,63 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
 
-/**
- * Use case for loading and showing interstitial ads with performance tracing.
- */
 class LoadInterstitialAdUseCase @Inject constructor(
     private val adRepository: AdRepository
 ) {
     
-    /**
-     * Load an interstitial ad with the specified configuration.
-     * 
-     * @param adConfig Configuration for the interstitial ad
-     * @return Flow emitting the ad load result
-     */
     fun loadAd(adConfig: AdConfig): Flow<AdLoadResult> {
-        return AppTracer.trace("LoadInterstitialAd_UseCase", mapOf(
+        AppTracer.startTrace("LoadInterstitialAd_UseCase_LoadAd", mapOf(
             "adUnitId" to adConfig.adUnitId,
             "isTestAd" to adConfig.isTestAd.toString()
-        )) {
-            adRepository.loadInterstitialAd(adConfig)
-                .onEach { result ->
-                    AppTracer.startTrace("LoadInterstitialAd_Result", mapOf(
-                        "result" to result::class.java.simpleName,
-                        "adUnitId" to adConfig.adUnitId
-                    ))
-                    AppTracer.stopTrace()
-                }
-        }
+        ))
+        
+        return adRepository.loadInterstitialAd(adConfig)
+            .onEach { result ->
+                AppTracer.startTrace("LoadInterstitialAd_Result", mapOf(
+                    "result" to result::class.java.simpleName,
+                    "adUnitId" to adConfig.adUnitId
+                ))
+                AppTracer.stopTrace("LoadInterstitialAd_Result")
+            }
+            .also {
+                AppTracer.stopTrace("LoadInterstitialAd_UseCase_LoadAd")
+            }
     }
     
-    /**
-     * Show a loaded interstitial ad.
-     * 
-     * @param adType The type of interstitial ad to show
-     * @return Flow emitting the show result
-     */
     fun showAd(adType: AdType = AdType.INTERSTITIAL): Flow<AdLoadResult> {
-        return AppTracer.trace("ShowInterstitialAd_UseCase", mapOf(
+        AppTracer.startTrace("ShowInterstitialAd_UseCase_ShowAd", mapOf(
             "adType" to adType.name
-        )) {
-            adRepository.showInterstitialAd(adType)
-                .onEach { result ->
-                    AppTracer.startTrace("ShowInterstitialAd_Result", mapOf(
-                        "result" to result::class.java.simpleName,
-                        "adType" to adType.name
-                    ))
-                    AppTracer.stopTrace()
-                }
-        }
+        ))
+        
+        return adRepository.showInterstitialAd(adType)
+            .onEach { result ->
+                AppTracer.startTrace("ShowInterstitialAd_Result", mapOf(
+                    "result" to result::class.java.simpleName,
+                    "adType" to adType.name
+                ))
+                AppTracer.stopTrace("ShowInterstitialAd_Result")
+            }
+            .also {
+                AppTracer.stopTrace("ShowInterstitialAd_UseCase_ShowAd")
+            }
     }
     
-    /**
-     * Load an interstitial ad using default test configuration.
-     * 
-     * @return Flow emitting the ad load result
-     */
     fun loadTestInterstitialAd(): Flow<AdLoadResult> {
+        AppTracer.startTrace("LoadInterstitialAd_UseCase_LoadTest")
+        
+        AppTracer.startTrace("LoadInterstitialAd_GetTestConfig")
         val testConfig = AdConfig.getTestAdConfigs()[AdType.INTERSTITIAL]!!
-        return loadAd(testConfig)
+        AppTracer.stopTrace("LoadInterstitialAd_GetTestConfig")
+        
+        val result = loadAd(testConfig)
+        AppTracer.stopTrace("LoadInterstitialAd_UseCase_LoadTest")
+        return result
     }
     
-    /**
-     * Check if an interstitial ad is ready to show.
-     * 
-     * @return True if the ad is ready to show
-     */
     suspend fun isAdReady(): Boolean {
-        return AppTracer.trace("CheckInterstitialAd_Ready") {
-            adRepository.isAdReady(AdType.INTERSTITIAL)
-        }
+        AppTracer.startTrace("CheckInterstitialAd_Ready")
+        val isReady = adRepository.isAdReady(AdType.INTERSTITIAL)
+        AppTracer.stopTrace("CheckInterstitialAd_Ready")
+        return isReady
     }
 }

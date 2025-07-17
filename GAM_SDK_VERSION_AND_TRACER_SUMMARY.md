@@ -1,36 +1,36 @@
 # GAM SDK PoC - Version Information & Tracer Tags Summary
 
-## 📱 **Android & SDK Versions**
+## Android & SDK Versions
 
-### **Core Android Versions:**
-- **Target SDK:** `35` (Android 15)
-- **Min SDK:** `24` (Android 7.0)
-- **Compile SDK:** `35` (Android 15)
-- **Java Target:** `11`
+### Core Android Versions:
+- Target SDK: 35 (Android 15)
+- Min SDK: 24 (Android 7.0)
+- Compile SDK: 35 (Android 15)
+- Java Target: 11
 
-### **🎯 GAM SDK Version:**
-- **GAM SDK:** `24.4.0` (Latest stable)
-- **Package:** `com.google.android.gms:play-services-ads:24.4.0`
+### GAM SDK Version:
+- GAM SDK: 24.4.0 (Latest stable)
+- Package: com.google.android.gms:play-services-ads:24.4.0
 
-### **⚡ Build Tools & Languages:**
-- **AGP (Android Gradle Plugin):** `8.10.1`
-- **Kotlin:** `2.1.0`
-- **KSP:** `2.1.0-1.0.29`
-- **Compose BOM:** `2024.12.01`
+### Build Tools & Languages:
+- AGP (Android Gradle Plugin): 8.10.1
+- Kotlin: 2.1.0
+- KSP: 2.1.0-1.0.29
+- Compose BOM: 2024.12.01
 
-### **🏗️ Architecture Libraries:**
-- **Hilt:** `2.53.1` (Dependency Injection)
-- **Coroutines:** `1.8.1`
-- **Lifecycle:** `2.9.1`
-- **Navigation Compose:** `2.8.5`
+### Architecture Libraries:
+- Hilt: 2.53.1 (Dependency Injection)
+- Coroutines: 1.8.1
+- Lifecycle: 2.9.1
+- Navigation Compose: 2.8.5
 
-### **📊 Performance Tracing:**
-- **AndroidX Tracing:** `1.2.0`
-- **Perfetto:** Native Android tracing (built-in)
+### Performance Tracing:
+- AndroidX Tracing: 1.2.0
+- Perfetto: Native Android tracing (built-in)
 
 ---
 
-## 🏷️ **AppTracer Tags Used in Project**
+## AppTracer Tags Used in Project
 
 ### **1. Application Lifecycle Tags:**
 ```kotlin

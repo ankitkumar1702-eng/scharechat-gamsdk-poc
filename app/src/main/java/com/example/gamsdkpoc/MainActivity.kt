@@ -54,12 +54,18 @@ class MainActivity : BaseActivity() {
     private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        AppTracer.startTrace("MainActivity_onCreate")
         super.onCreate(savedInstanceState)
+        
+        AppTracer.startTrace("MainActivity_EnableEdgeToEdge")
         enableEdgeToEdge()
+        AppTracer.stopTrace("MainActivity_EnableEdgeToEdge")
         
-        // Set activity context for showing ads
+        AppTracer.startTrace("MainActivity_SetActivity")
         adRepository.setCurrentActivity(this)
+        AppTracer.stopTrace("MainActivity_SetActivity")
         
+        AppTracer.startTrace("MainActivity_SetContent")
         setTracedContent {
             GamSdkPocTheme {
                 MainScreen(
@@ -68,18 +74,22 @@ class MainActivity : BaseActivity() {
                 )
             }
         }
+        AppTracer.stopTrace("MainActivity_SetContent")
+        AppTracer.stopTrace("MainActivity_onCreate")
     }
     
     override fun onResume() {
+        AppTracer.startTrace("MainActivity_onResume")
         super.onResume()
-        // Update activity context
         adRepository.setCurrentActivity(this)
+        AppTracer.stopTrace("MainActivity_onResume")
     }
     
     override fun onPause() {
+        AppTracer.startTrace("MainActivity_onPause")
         super.onPause()
-        // Clear activity context to prevent memory leaks
         adRepository.setCurrentActivity(null)
+        AppTracer.stopTrace("MainActivity_onPause")
     }
 }
 
@@ -90,17 +100,20 @@ fun MainScreen(
 ) {
     AppTracer.startTrace("MainScreen_Compose")
     
+    AppTracer.startTrace("MainScreen_StateCollection")
     val uiState by viewModel.uiState.collectAsState()
     val bannerAdState by viewModel.bannerAdState.collectAsState()
     val interstitialAdState by viewModel.interstitialAdState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+    AppTracer.stopTrace("MainScreen_StateCollection")
 
-    // Show snackbar for messages
     LaunchedEffect(uiState.showMessage) {
+        AppTracer.startTrace("MainScreen_SnackbarEffect")
         uiState.showMessage?.let { message ->
             snackbarHostState.showSnackbar(message)
             viewModel.onUserAction(UserAction.ClearMessage)
         }
+        AppTracer.stopTrace("MainScreen_SnackbarEffect")
     }
 
     Scaffold(
@@ -115,7 +128,6 @@ fun MainScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Title
             Text(
                 text = "GAM SDK PoC",
                 style = MaterialTheme.typography.headlineMedium,
@@ -132,14 +144,12 @@ fun MainScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Banner Ad Section
             AdStatusCard(
                 title = "Banner Ad",
                 adState = bannerAdState,
                 onLoadClick = { viewModel.onUserAction(UserAction.LoadBannerAd) }
             )
             
-            // Banner Ad Container - Show the actual banner ad when loaded
             if (bannerAdState is AdLoadResult.Success) {
                 Card(
                     modifier = Modifier
@@ -165,7 +175,6 @@ fun MainScreen(
                 }
             }
 
-            // Interstitial Ad Section
             AdStatusCard(
                 title = "Interstitial Ad",
                 adState = interstitialAdState,
@@ -175,7 +184,6 @@ fun MainScreen(
 
             Spacer(modifier = Modifier.weight(1f))
             
-            // Test Activity Button
             val context = LocalContext.current
             Button(
                 onClick = {
@@ -192,7 +200,6 @@ fun MainScreen(
             
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Performance Info
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(
@@ -220,7 +227,7 @@ fun MainScreen(
         }
     }
     
-    AppTracer.stopTrace()
+    AppTracer.stopTrace("MainScreen_Compose")
 }
 
 @Composable
@@ -245,7 +252,6 @@ fun AdStatusCard(
             
             Spacer(modifier = Modifier.height(8.dp))
             
-            // Ad Status
             val statusText = when (adState) {
                 is AdLoadResult.Success -> "✅ Loaded Successfully"
                 is AdLoadResult.Error -> "❌ Error: ${adState.message}"
@@ -266,7 +272,6 @@ fun AdStatusCard(
             
             Spacer(modifier = Modifier.height(12.dp))
             
-            // Action Buttons
             Column(
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -303,7 +308,6 @@ fun AdStatusCard(
 @Composable
 fun MainScreenPreview() {
     GamSdkPocTheme {
-        // Preview with mock data
         AdStatusCard(
             title = "Banner Ad",
             adState = AdLoadResult.Success,

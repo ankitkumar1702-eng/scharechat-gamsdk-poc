@@ -9,42 +9,38 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.onEach
 import javax.inject.Inject
 
-/**
- * Use case for loading banner ads with performance tracing.
- */
 class LoadBannerAdUseCase @Inject constructor(
     private val adRepository: AdRepository
 ) {
     
-    /**
-     * Load a banner ad with the specified configuration.
-     * 
-     * @param adConfig Configuration for the banner ad
-     * @return Flow emitting the ad load result
-     */
     operator fun invoke(adConfig: AdConfig): Flow<AdLoadResult> {
-        return AppTracer.trace("LoadBannerAd_UseCase", mapOf(
+        AppTracer.startTrace("LoadBannerAd_UseCase_Invoke", mapOf(
             "adUnitId" to adConfig.adUnitId,
             "isTestAd" to adConfig.isTestAd.toString()
-        )) {
-            adRepository.loadBannerAd(adConfig)
-                .onEach { result ->
-                    AppTracer.startTrace("LoadBannerAd_Result", mapOf(
-                        "result" to result::class.java.simpleName,
-                        "adUnitId" to adConfig.adUnitId
-                    ))
-                    AppTracer.stopTrace()
-                }
-        }
+        ))
+        
+        return adRepository.loadBannerAd(adConfig)
+            .onEach { result ->
+                AppTracer.startTrace("LoadBannerAd_Result", mapOf(
+                    "result" to result::class.java.simpleName,
+                    "adUnitId" to adConfig.adUnitId
+                ))
+                AppTracer.stopTrace("LoadBannerAd_Result")
+            }
+            .also {
+                AppTracer.stopTrace("LoadBannerAd_UseCase_Invoke")
+            }
     }
     
-    /**
-     * Load a banner ad using default test configuration.
-     * 
-     * @return Flow emitting the ad load result
-     */
     fun loadTestBannerAd(): Flow<AdLoadResult> {
+        AppTracer.startTrace("LoadBannerAd_UseCase_LoadTest")
+        
+        AppTracer.startTrace("LoadBannerAd_GetTestConfig")
         val testConfig = AdConfig.getTestAdConfigs()[AdType.BANNER]!!
-        return invoke(testConfig)
+        AppTracer.stopTrace("LoadBannerAd_GetTestConfig")
+        
+        val result = invoke(testConfig)
+        AppTracer.stopTrace("LoadBannerAd_UseCase_LoadTest")
+        return result
     }
 }

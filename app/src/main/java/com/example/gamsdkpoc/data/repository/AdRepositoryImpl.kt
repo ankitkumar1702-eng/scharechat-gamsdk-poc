@@ -27,105 +27,137 @@ import java.util.concurrent.ConcurrentHashMap
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Implementation of AdRepository with GAM SDK integration and performance tracing.
- */
 @Singleton
 class AdRepositoryImpl @Inject constructor(
     @ApplicationContext private val context: Context
 ) : AdRepository {
 
-    // Cache for loaded ads
     private val loadedInterstitialAds = ConcurrentHashMap<AdType, InterstitialAd>()
     private val loadedRewardedAds = ConcurrentHashMap<AdType, RewardedAd>()
     private val loadedBannerAds = ConcurrentHashMap<AdType, AdView>()
     private val adConfigs = ConcurrentHashMap<AdType, AdConfig>()
     
-    // Store current activity reference for showing ads
     private var currentActivity: Activity? = null
 
     init {
-        // Initialize with test ad configurations
         AdConfig.getTestAdConfigs().forEach { (adType, config) ->
             adConfigs[adType] = config
         }
     }
     
-    /**
-     * Set the current activity for showing ads.
-     * This should be called from the activity's onCreate/onResume.
-     */
     fun setCurrentActivity(activity: Activity?) {
+        AppTracer.startTrace("AdRepository_SetCurrentActivity", mapOf(
+            "activity" to (activity?.javaClass?.simpleName ?: "null")
+        ))
         currentActivity = activity
+        AppTracer.stopTrace("AdRepository_SetCurrentActivity")
     }
 
     override fun loadBannerAd(adConfig: AdConfig): Flow<AdLoadResult> = callbackFlow {
+        val currentThread = Thread.currentThread()
+        android.util.Log.d("AD_THREAD", "loadBannerAd() called on thread: ${currentThread.name} (ID: ${currentThread.id})")
+        
         AppTracer.startTrace("AdRepository_LoadBanner", mapOf(
             "adUnitId" to adConfig.adUnitId,
-            "isTestAd" to adConfig.isTestAd.toString()
+            "isTestAd" to adConfig.isTestAd.toString(),
+            "thread" to currentThread.name,
+            "thread_id" to currentThread.id.toString()
         ))
 
+        AppTracer.startTrace("AdRepository_LoadBanner_SendLoading")
         trySend(AdLoadResult.Loading)
+        AppTracer.stopTrace("AdRepository_LoadBanner_SendLoading")
 
         try {
+            AppTracer.startTrace("AdRepository_LoadBanner_CreateAdView")
             val adView = AdView(context).apply {
+                AppTracer.startTrace("AdRepository_LoadBanner_SetAdUnitId")
                 setAdUnitId(adConfig.adUnitId)
-                setAdSize(AdSize.BANNER)
+                AppTracer.stopTrace("AdRepository_LoadBanner_SetAdUnitId")
                 
+                AppTracer.startTrace("AdRepository_LoadBanner_SetAdSize")
+                setAdSize(AdSize.BANNER)
+                AppTracer.stopTrace("AdRepository_LoadBanner_SetAdSize")
+                
+                AppTracer.startTrace("AdRepository_LoadBanner_SetListener")
                 adListener = object : AdListener() {
                     override fun onAdLoaded() {
-                        AppTracer.startTrace("AdRepository_LoadBanner_Success")
+                        val callbackThread = Thread.currentThread()
+                        android.util.Log.d("AD_THREAD", "Banner onAdLoaded() callback on thread: ${callbackThread.name} (ID: ${callbackThread.id})")
+                        
+                        AppTracer.startTrace("AdRepository_LoadBanner_Success", mapOf(
+                            "callback_thread" to callbackThread.name,
+                            "callback_thread_id" to callbackThread.id.toString()
+                        ))
                         loadedBannerAds[adConfig.adType] = this@apply
                         trySend(AdLoadResult.Success)
-                        AppTracer.stopTrace()
+                        AppTracer.stopTrace("AdRepository_LoadBanner_Success")
                     }
                     
                     override fun onAdFailedToLoad(adError: LoadAdError) {
+                        val callbackThread = Thread.currentThread()
+                        android.util.Log.d("AD_THREAD", "Banner onAdFailedToLoad() callback on thread: ${callbackThread.name} (ID: ${callbackThread.id})")
+                        
                         AppTracer.startTrace("AdRepository_LoadBanner_Failed", mapOf(
                             "errorCode" to adError.code.toString(),
-                            "errorMessage" to adError.message
+                            "errorMessage" to adError.message,
+                            "callback_thread" to callbackThread.name,
+                            "callback_thread_id" to callbackThread.id.toString()
                         ))
                         trySend(AdLoadResult.Error(adError.code, adError.message))
-                        AppTracer.stopTrace()
+                        AppTracer.stopTrace("AdRepository_LoadBanner_Failed")
                     }
                     
                     override fun onAdClicked() {
                         AppTracer.startTrace("BannerAd_Clicked")
-                        AppTracer.stopTrace()
+                        AppTracer.stopTrace("BannerAd_Clicked")
                     }
                     
                     override fun onAdImpression() {
                         AppTracer.startTrace("BannerAd_Impression")
-                        AppTracer.stopTrace()
+                        AppTracer.stopTrace("BannerAd_Impression")
                     }
                 }
+                AppTracer.stopTrace("AdRepository_LoadBanner_SetListener")
             }
+            AppTracer.stopTrace("AdRepository_LoadBanner_CreateAdView")
 
+            AppTracer.startTrace("AdRepository_LoadBanner_CreateRequest")
             val adRequest = AdRequest.Builder().build()
+            AppTracer.stopTrace("AdRepository_LoadBanner_CreateRequest")
+            
+            AppTracer.startTrace("AdRepository_LoadBanner_LoadAd")
             adView.loadAd(adRequest)
+            AppTracer.stopTrace("AdRepository_LoadBanner_LoadAd")
             
         } catch (e: Exception) {
             AppTracer.startTrace("AdRepository_LoadBanner_Error", mapOf(
                 "error" to e.message.orEmpty()
             ))
             trySend(AdLoadResult.Error(-1, e.message ?: "Unknown error"))
-            AppTracer.stopTrace()
+            AppTracer.stopTrace("AdRepository_LoadBanner_Error")
         } finally {
-            AppTracer.stopTrace()
+            AppTracer.stopTrace("AdRepository_LoadBanner")
         }
 
         awaitClose { }
     }
 
     override fun loadInterstitialAd(adConfig: AdConfig): Flow<AdLoadResult> = callbackFlow {
+        val currentThread = Thread.currentThread()
+        android.util.Log.d("AD_THREAD", "loadInterstitialAd() called on thread: ${currentThread.name} (ID: ${currentThread.id})")
+        
         AppTracer.startTrace("AdRepository_LoadInterstitial", mapOf(
             "adUnitId" to adConfig.adUnitId,
-            "isTestAd" to adConfig.isTestAd.toString()
+            "isTestAd" to adConfig.isTestAd.toString(),
+            "thread" to currentThread.name,
+            "thread_id" to currentThread.id.toString()
         ))
 
         trySend(AdLoadResult.Loading)
 
         val adRequest = AdRequest.Builder().build()
+        android.util.Log.d("AD_THREAD", "Calling InterstitialAd.load() on thread: ${Thread.currentThread().name}")
 
         InterstitialAd.load(
             context,
@@ -143,12 +175,16 @@ class AdRepositoryImpl @Inject constructor(
                 }
 
                 override fun onAdLoaded(interstitialAd: InterstitialAd) {
-                    AppTracer.startTrace("AdRepository_LoadInterstitial_Success")
+                    val callbackThread = Thread.currentThread()
+                    android.util.Log.d("AD_THREAD", "Interstitial onAdLoaded() callback on thread: ${callbackThread.name} (ID: ${callbackThread.id})")
                     
-                    // Cache the loaded ad
+                    AppTracer.startTrace("AdRepository_LoadInterstitial_Success", mapOf(
+                        "callback_thread" to callbackThread.name,
+                        "callback_thread_id" to callbackThread.id.toString()
+                    ))
+                    
                     loadedInterstitialAds[adConfig.adType] = interstitialAd
                     
-                    // Set up full screen content callback for show events
                     interstitialAd.fullScreenContentCallback = object : FullScreenContentCallback() {
                         override fun onAdClicked() {
                             AppTracer.startTrace("InterstitialAd_Clicked")
@@ -157,7 +193,6 @@ class AdRepositoryImpl @Inject constructor(
 
                         override fun onAdDismissedFullScreenContent() {
                             AppTracer.startTrace("InterstitialAd_Dismissed")
-                            // Remove from cache after showing
                             loadedInterstitialAds.remove(adConfig.adType)
                             AppTracer.stopTrace()
                         }
@@ -184,7 +219,7 @@ class AdRepositoryImpl @Inject constructor(
                     
                     trySend(AdLoadResult.Success)
                     AppTracer.stopTrace()
-                    AppTracer.stopTrace() // End main trace
+                    AppTracer.stopTrace()
                 }
             }
         )
@@ -238,24 +273,28 @@ class AdRepositoryImpl @Inject constructor(
             adRequest,
             object : RewardedAdLoadCallback() {
                 override fun onAdFailedToLoad(adError: LoadAdError) {
-                    AppTracer.startTrace("AdRepository_LoadRewarded_Failed", mapOf(
+                    val callbackThread = Thread.currentThread()
+                    android.util.Log.d("AD_THREAD", "Interstitial onAdFailedToLoad() callback on thread: ${callbackThread.name} (ID: ${callbackThread.id})")
+                    
+                    AppTracer.startTrace("AdRepository_LoadInterstitial_Failed", mapOf(
                         "errorCode" to adError.code.toString(),
-                        "errorMessage" to adError.message
+                        "errorMessage" to adError.message,
+                        "callback_thread" to callbackThread.name,
+                        "callback_thread_id" to callbackThread.id.toString()
                     ))
                     trySend(AdLoadResult.Error(adError.code, adError.message))
-                    AppTracer.stopTrace()
-                    AppTracer.stopTrace() // End main trace
+                    AppTracer.stopTrace("AdRepository_LoadInterstitial_Failed")
+                    AppTracer.stopTrace("AdRepository_LoadInterstitial")
                 }
 
                 override fun onAdLoaded(rewardedAd: RewardedAd) {
                     AppTracer.startTrace("AdRepository_LoadRewarded_Success")
                     
-                    // Cache the loaded ad
                     loadedRewardedAds[adConfig.adType] = rewardedAd
                     
                     trySend(AdLoadResult.Success)
                     AppTracer.stopTrace()
-                    AppTracer.stopTrace() // End main trace
+                    AppTracer.stopTrace()
                 }
             }
         )
@@ -275,7 +314,6 @@ class AdRepositoryImpl @Inject constructor(
             }
             rewardedAd != null -> {
                 try {
-                    // Show the rewarded ad with reward callback
                     rewardedAd.show(activity) { rewardItem ->
                         AppTracer.startTrace("RewardedAd_UserEarnedReward", mapOf(
                             "type" to rewardItem.type,
@@ -340,7 +378,6 @@ class AdRepositoryImpl @Inject constructor(
                         loadBannerAd(config)
                     }
                     else -> {
-                        // Other ad types
                     }
                 }
             }
@@ -349,9 +386,6 @@ class AdRepositoryImpl @Inject constructor(
         AppTracer.stopTrace()
     }
     
-    /**
-     * Get the loaded banner AdView for display in the UI.
-     */
     fun getBannerAdView(adType: AdType): AdView? {
         return loadedBannerAds[adType]
     }

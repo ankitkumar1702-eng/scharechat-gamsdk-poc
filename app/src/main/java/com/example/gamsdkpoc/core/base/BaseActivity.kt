@@ -6,15 +6,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import com.example.gamsdkpoc.core.tracing.AppTracer
 
-/**
- * Base activity class with integrated performance tracing.
- * 
- * Features:
- * - Automatic lifecycle tracing for performance monitoring
- * - Compose integration with tracing support
- * - Consistent activity setup across the app
- * - Error handling for tracing operations
- */
 abstract class BaseActivity : ComponentActivity() {
 
     private val activityName = this::class.java.simpleName
@@ -85,12 +76,6 @@ abstract class BaseActivity : ComponentActivity() {
         AppTracer.stopTrace()
     }
 
-    /**
-     * Set Compose content with tracing support.
-     * Automatically traces the composition process.
-     * 
-     * @param content The Composable content to set
-     */
     protected fun setTracedContent(content: @Composable () -> Unit) {
         AppTracer.startTrace("${activityName}_setContent", mapOf(
             "activity" to activityName,
