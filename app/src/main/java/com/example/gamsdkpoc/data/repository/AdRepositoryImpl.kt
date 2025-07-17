@@ -46,11 +46,11 @@ class AdRepositoryImpl @Inject constructor(
     }
     
     fun setCurrentActivity(activity: Activity?) {
-        AppTracer.startTrace("AdRepository_SetCurrentActivity", mapOf(
+        AppTracer.startTrace("Repository_SetActivity", mapOf(
             "activity" to (activity?.javaClass?.simpleName ?: "null")
         ))
         currentActivity = activity
-        AppTracer.stopTrace("AdRepository_SetCurrentActivity")
+        AppTracer.stopTrace("Repository_SetActivity")
     }
 
     override fun loadBannerAd(adConfig: AdConfig): Flow<AdLoadResult> = callbackFlow {
@@ -69,75 +69,74 @@ class AdRepositoryImpl @Inject constructor(
         AppTracer.stopTrace("AdRepository_LoadBanner_SendLoading")
 
         try {
-            AppTracer.startTrace("AdRepository_LoadBanner_CreateAdView")
+            AppTracer.startTrace("Repository_CreateBannerAdView")
             val adView = AdView(context).apply {
-                AppTracer.startTrace("AdRepository_LoadBanner_SetAdUnitId")
+                AppTracer.startTrace("Repository_SetBannerAdUnitId")
                 setAdUnitId(adConfig.adUnitId)
-                AppTracer.stopTrace("AdRepository_LoadBanner_SetAdUnitId")
+                AppTracer.stopTrace("Repository_SetBannerAdUnitId")
                 
-                AppTracer.startTrace("AdRepository_LoadBanner_SetAdSize")
+                AppTracer.startTrace("Repository_SetBannerAdSize")
                 setAdSize(AdSize.BANNER)
-                AppTracer.stopTrace("AdRepository_LoadBanner_SetAdSize")
+                AppTracer.stopTrace("Repository_SetBannerAdSize")
                 
-                AppTracer.startTrace("AdRepository_LoadBanner_SetListener")
+                AppTracer.startTrace("Repository_SetBannerListener")
                 adListener = object : AdListener() {
                     override fun onAdLoaded() {
                         val callbackThread = Thread.currentThread()
                         android.util.Log.d("AD_THREAD", "Banner onAdLoaded() callback on thread: ${callbackThread.name} (ID: ${callbackThread.id})")
                         
-                        AppTracer.startTrace("AdRepository_LoadBanner_Success", mapOf(
+                        AppTracer.startTrace("BannerAd_OnLoaded", mapOf(
                             "callback_thread" to callbackThread.name,
                             "callback_thread_id" to callbackThread.id.toString()
                         ))
                         loadedBannerAds[adConfig.adType] = this@apply
                         trySend(AdLoadResult.Success)
-                        AppTracer.stopTrace("AdRepository_LoadBanner_Success")
+                        AppTracer.stopTrace("BannerAd_OnLoaded")
                     }
                     
                     override fun onAdFailedToLoad(adError: LoadAdError) {
                         val callbackThread = Thread.currentThread()
                         android.util.Log.d("AD_THREAD", "Banner onAdFailedToLoad() callback on thread: ${callbackThread.name} (ID: ${callbackThread.id})")
                         
-                        AppTracer.startTrace("AdRepository_LoadBanner_Failed", mapOf(
+                        AppTracer.startTrace("BannerAd_OnFailed", mapOf(
                             "errorCode" to adError.code.toString(),
                             "errorMessage" to adError.message,
-                            "callback_thread" to callbackThread.name,
-                            "callback_thread_id" to callbackThread.id.toString()
+                            "callback_thread" to callbackThread.name
                         ))
                         trySend(AdLoadResult.Error(adError.code, adError.message))
-                        AppTracer.stopTrace("AdRepository_LoadBanner_Failed")
+                        AppTracer.stopTrace("BannerAd_OnFailed")
                     }
                     
                     override fun onAdClicked() {
-                        AppTracer.startTrace("BannerAd_Clicked")
-                        AppTracer.stopTrace("BannerAd_Clicked")
+                        AppTracer.startTrace("BannerAd_OnClicked")
+                        AppTracer.stopTrace("BannerAd_OnClicked")
                     }
                     
                     override fun onAdImpression() {
-                        AppTracer.startTrace("BannerAd_Impression")
-                        AppTracer.stopTrace("BannerAd_Impression")
+                        AppTracer.startTrace("BannerAd_OnImpression")
+                        AppTracer.stopTrace("BannerAd_OnImpression")
                     }
                 }
-                AppTracer.stopTrace("AdRepository_LoadBanner_SetListener")
+                AppTracer.stopTrace("Repository_SetBannerListener")
             }
-            AppTracer.stopTrace("AdRepository_LoadBanner_CreateAdView")
+            AppTracer.stopTrace("Repository_CreateBannerAdView")
 
-            AppTracer.startTrace("AdRepository_LoadBanner_CreateRequest")
+            AppTracer.startTrace("Repository_CreateBannerRequest")
             val adRequest = AdRequest.Builder().build()
-            AppTracer.stopTrace("AdRepository_LoadBanner_CreateRequest")
+            AppTracer.stopTrace("Repository_CreateBannerRequest")
             
-            AppTracer.startTrace("AdRepository_LoadBanner_LoadAd")
+            AppTracer.startTrace("Repository_LoadBannerAd")
             adView.loadAd(adRequest)
-            AppTracer.stopTrace("AdRepository_LoadBanner_LoadAd")
+            AppTracer.stopTrace("Repository_LoadBannerAd")
             
         } catch (e: Exception) {
-            AppTracer.startTrace("AdRepository_LoadBanner_Error", mapOf(
+            AppTracer.startTrace("Repository_BannerLoadError", mapOf(
                 "error" to e.message.orEmpty()
             ))
             trySend(AdLoadResult.Error(-1, e.message ?: "Unknown error"))
-            AppTracer.stopTrace("AdRepository_LoadBanner_Error")
+            AppTracer.stopTrace("Repository_BannerLoadError")
         } finally {
-            AppTracer.stopTrace("AdRepository_LoadBanner")
+            AppTracer.stopTrace("Repository_LoadBanner")
         }
 
         awaitClose { }

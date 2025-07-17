@@ -14,58 +14,58 @@ class LoadInterstitialAdUseCase @Inject constructor(
 ) {
     
     fun loadAd(adConfig: AdConfig): Flow<AdLoadResult> {
-        AppTracer.startTrace("LoadInterstitialAd_UseCase_LoadAd", mapOf(
+        AppTracer.startTrace("InterstitialUseCase_CallRepository", mapOf(
             "adUnitId" to adConfig.adUnitId,
             "isTestAd" to adConfig.isTestAd.toString()
         ))
         
-        return adRepository.loadInterstitialAd(adConfig)
+        val flow = adRepository.loadInterstitialAd(adConfig)
             .onEach { result ->
-                AppTracer.startTrace("LoadInterstitialAd_Result", mapOf(
+                AppTracer.startTrace("InterstitialUseCase_ProcessResult", mapOf(
                     "result" to result::class.java.simpleName,
                     "adUnitId" to adConfig.adUnitId
                 ))
-                AppTracer.stopTrace("LoadInterstitialAd_Result")
+                AppTracer.stopTrace("InterstitialUseCase_ProcessResult")
             }
-            .also {
-                AppTracer.stopTrace("LoadInterstitialAd_UseCase_LoadAd")
-            }
+        
+        AppTracer.stopTrace("InterstitialUseCase_CallRepository")
+        return flow
     }
     
     fun showAd(adType: AdType = AdType.INTERSTITIAL): Flow<AdLoadResult> {
-        AppTracer.startTrace("ShowInterstitialAd_UseCase_ShowAd", mapOf(
+        AppTracer.startTrace("InterstitialUseCase_CallShowRepository", mapOf(
             "adType" to adType.name
         ))
         
-        return adRepository.showInterstitialAd(adType)
+        val flow = adRepository.showInterstitialAd(adType)
             .onEach { result ->
-                AppTracer.startTrace("ShowInterstitialAd_Result", mapOf(
+                AppTracer.startTrace("InterstitialUseCase_ProcessShowResult", mapOf(
                     "result" to result::class.java.simpleName,
                     "adType" to adType.name
                 ))
-                AppTracer.stopTrace("ShowInterstitialAd_Result")
+                AppTracer.stopTrace("InterstitialUseCase_ProcessShowResult")
             }
-            .also {
-                AppTracer.stopTrace("ShowInterstitialAd_UseCase_ShowAd")
-            }
+        
+        AppTracer.stopTrace("InterstitialUseCase_CallShowRepository")
+        return flow
     }
     
     fun loadTestInterstitialAd(): Flow<AdLoadResult> {
-        AppTracer.startTrace("LoadInterstitialAd_UseCase_LoadTest")
-        
-        AppTracer.startTrace("LoadInterstitialAd_GetTestConfig")
+        AppTracer.startTrace("InterstitialUseCase_GetTestConfig")
         val testConfig = AdConfig.getTestAdConfigs()[AdType.INTERSTITIAL]!!
-        AppTracer.stopTrace("LoadInterstitialAd_GetTestConfig")
+        AppTracer.stopTrace("InterstitialUseCase_GetTestConfig")
         
+        AppTracer.startTrace("InterstitialUseCase_LoadWithTestConfig")
         val result = loadAd(testConfig)
-        AppTracer.stopTrace("LoadInterstitialAd_UseCase_LoadTest")
+        AppTracer.stopTrace("InterstitialUseCase_LoadWithTestConfig")
+        
         return result
     }
     
     suspend fun isAdReady(): Boolean {
-        AppTracer.startTrace("CheckInterstitialAd_Ready")
+        AppTracer.startTrace("InterstitialUseCase_CheckReady")
         val isReady = adRepository.isAdReady(AdType.INTERSTITIAL)
-        AppTracer.stopTrace("CheckInterstitialAd_Ready")
+        AppTracer.stopTrace("InterstitialUseCase_CheckReady")
         return isReady
     }
 }

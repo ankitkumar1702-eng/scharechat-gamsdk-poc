@@ -54,8 +54,9 @@ class MainActivity : BaseActivity() {
     private val viewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        AppTracer.startTrace("MainActivity_onCreate")
+        AppTracer.startTrace("MainActivity_SuperOnCreate")
         super.onCreate(savedInstanceState)
+        AppTracer.stopTrace("MainActivity_SuperOnCreate")
         
         AppTracer.startTrace("MainActivity_EnableEdgeToEdge")
         enableEdgeToEdge()
@@ -75,21 +76,26 @@ class MainActivity : BaseActivity() {
             }
         }
         AppTracer.stopTrace("MainActivity_SetContent")
-        AppTracer.stopTrace("MainActivity_onCreate")
     }
     
     override fun onResume() {
-        AppTracer.startTrace("MainActivity_onResume")
+        AppTracer.startTrace("MainActivity_SuperOnResume")
         super.onResume()
+        AppTracer.stopTrace("MainActivity_SuperOnResume")
+        
+        AppTracer.startTrace("MainActivity_SetActivityOnResume")
         adRepository.setCurrentActivity(this)
-        AppTracer.stopTrace("MainActivity_onResume")
+        AppTracer.stopTrace("MainActivity_SetActivityOnResume")
     }
     
     override fun onPause() {
-        AppTracer.startTrace("MainActivity_onPause")
+        AppTracer.startTrace("MainActivity_SuperOnPause")
         super.onPause()
+        AppTracer.stopTrace("MainActivity_SuperOnPause")
+        
+        AppTracer.startTrace("MainActivity_ClearActivityOnPause")
         adRepository.setCurrentActivity(null)
-        AppTracer.stopTrace("MainActivity_onPause")
+        AppTracer.stopTrace("MainActivity_ClearActivityOnPause")
     }
 }
 
@@ -98,14 +104,15 @@ fun MainScreen(
     viewModel: MainViewModel,
     adRepository: AdRepositoryImpl
 ) {
-    AppTracer.startTrace("MainScreen_Compose")
-    
     AppTracer.startTrace("MainScreen_StateCollection")
     val uiState by viewModel.uiState.collectAsState()
     val bannerAdState by viewModel.bannerAdState.collectAsState()
     val interstitialAdState by viewModel.interstitialAdState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
     AppTracer.stopTrace("MainScreen_StateCollection")
+    
+    AppTracer.startTrace("MainScreen_RememberSnackbar")
+    val snackbarHostState = remember { SnackbarHostState() }
+    AppTracer.stopTrace("MainScreen_RememberSnackbar")
 
     LaunchedEffect(uiState.showMessage) {
         AppTracer.startTrace("MainScreen_SnackbarEffect")
@@ -227,7 +234,6 @@ fun MainScreen(
         }
     }
     
-    AppTracer.stopTrace("MainScreen_Compose")
 }
 
 @Composable
@@ -279,7 +285,7 @@ fun AdStatusCard(
                     onClick = {
                         AppTracer.startTrace("User_Click_LoadAd", mapOf("adType" to title))
                         onLoadClick()
-                        AppTracer.stopTrace()
+                        AppTracer.stopTrace("User_Click_LoadAd")
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -291,7 +297,7 @@ fun AdStatusCard(
                         onClick = {
                             AppTracer.startTrace("User_Click_ShowAd", mapOf("adType" to title))
                             showClick()
-                            AppTracer.stopTrace()
+                            AppTracer.stopTrace("User_Click_ShowAd")
                         },
                         modifier = Modifier.fillMaxWidth(),
                         enabled = adState is AdLoadResult.Success

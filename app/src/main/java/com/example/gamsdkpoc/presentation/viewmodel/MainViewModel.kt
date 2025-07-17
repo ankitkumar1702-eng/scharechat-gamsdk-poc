@@ -30,65 +30,61 @@ class MainViewModel @Inject constructor(
     val interstitialAdState: StateFlow<AdLoadResult> = _interstitialAdState.asStateFlow()
 
     init {
-        AppTracer.startTrace("MainViewModel_Init")
+        AppTracer.startTrace("MainViewModel_LoadBannerInit")
         loadBannerAd()
+        AppTracer.stopTrace("MainViewModel_LoadBannerInit")
+        
+        AppTracer.startTrace("MainViewModel_LoadInterstitialInit")
         loadInterstitialAd()
-        AppTracer.stopTrace()
+        AppTracer.stopTrace("MainViewModel_LoadInterstitialInit")
     }
 
     fun loadBannerAd() {
-        AppTracer.startTrace("MainViewModel_LoadBannerAd")
-        
+        AppTracer.startTrace("MainViewModel_LaunchBannerCoroutine")
         viewModelScope.launch {
-            AppTracer.startTrace("MainViewModel_LoadBannerAd_Coroutine")
+            AppTracer.startTrace("MainViewModel_CallBannerUseCase")
             loadBannerAdUseCase.loadTestBannerAd()
                 .collect { result ->
-                    AppTracer.startTrace("MainViewModel_BannerAdResult", mapOf(
+                    AppTracer.startTrace("MainViewModel_UpdateBannerState", mapOf(
                         "result" to result::class.java.simpleName
                     ))
                     _bannerAdState.value = result
-                    AppTracer.stopTrace("MainViewModel_BannerAdResult")
+                    AppTracer.stopTrace("MainViewModel_UpdateBannerState")
                 }
-            AppTracer.stopTrace("MainViewModel_LoadBannerAd_Coroutine")
+            AppTracer.stopTrace("MainViewModel_CallBannerUseCase")
         }
-        
-        AppTracer.stopTrace("MainViewModel_LoadBannerAd")
+        AppTracer.stopTrace("MainViewModel_LaunchBannerCoroutine")
     }
 
     fun loadInterstitialAd() {
-        AppTracer.startTrace("MainViewModel_LoadInterstitialAd")
-        
+        AppTracer.startTrace("MainViewModel_LaunchInterstitialCoroutine")
         viewModelScope.launch {
-            AppTracer.startTrace("MainViewModel_LoadInterstitialAd_Coroutine")
+            AppTracer.startTrace("MainViewModel_CallInterstitialUseCase")
             loadInterstitialAdUseCase.loadTestInterstitialAd()
                 .collect { result ->
-                    AppTracer.startTrace("MainViewModel_InterstitialAdResult", mapOf(
+                    AppTracer.startTrace("MainViewModel_UpdateInterstitialState", mapOf(
                         "result" to result::class.java.simpleName
                     ))
                     _interstitialAdState.value = result
-                    AppTracer.stopTrace("MainViewModel_InterstitialAdResult")
+                    AppTracer.stopTrace("MainViewModel_UpdateInterstitialState")
                 }
-            AppTracer.stopTrace("MainViewModel_LoadInterstitialAd_Coroutine")
+            AppTracer.stopTrace("MainViewModel_CallInterstitialUseCase")
         }
-        
-        AppTracer.stopTrace("MainViewModel_LoadInterstitialAd")
+        AppTracer.stopTrace("MainViewModel_LaunchInterstitialCoroutine")
     }
 
     fun showInterstitialAd() {
-        AppTracer.startTrace("MainViewModel_ShowInterstitialAd")
-        
+        AppTracer.startTrace("MainViewModel_LaunchShowCoroutine")
         viewModelScope.launch {
-            AppTracer.startTrace("MainViewModel_ShowInterstitialAd_Coroutine")
-            
             AppTracer.startTrace("MainViewModel_CheckAdReady")
             val isReady = loadInterstitialAdUseCase.isAdReady()
             AppTracer.stopTrace("MainViewModel_CheckAdReady")
             
             if (isReady) {
-                AppTracer.startTrace("MainViewModel_ShowAd_Flow")
+                AppTracer.startTrace("MainViewModel_CallShowUseCase")
                 loadInterstitialAdUseCase.showAd()
                     .collect { result ->
-                        AppTracer.startTrace("MainViewModel_ShowInterstitialResult", mapOf(
+                        AppTracer.startTrace("MainViewModel_UpdateShowMessage", mapOf(
                             "result" to result::class.java.simpleName
                         ))
                         
@@ -100,58 +96,53 @@ class MainViewModel @Inject constructor(
                             }
                         )
                         
-                        AppTracer.stopTrace("MainViewModel_ShowInterstitialResult")
+                        AppTracer.stopTrace("MainViewModel_UpdateShowMessage")
                     }
-                AppTracer.stopTrace("MainViewModel_ShowAd_Flow")
+                AppTracer.stopTrace("MainViewModel_CallShowUseCase")
             } else {
-                AppTracer.startTrace("MainViewModel_AdNotReady_Reload")
+                AppTracer.startTrace("MainViewModel_AdNotReady")
                 _uiState.value = _uiState.value.copy(
                     showMessage = "Interstitial ad not ready. Loading..."
                 )
+                AppTracer.stopTrace("MainViewModel_AdNotReady")
+                
+                AppTracer.startTrace("MainViewModel_ReloadAd")
                 loadInterstitialAd()
-                AppTracer.stopTrace("MainViewModel_AdNotReady_Reload")
+                AppTracer.stopTrace("MainViewModel_ReloadAd")
             }
-            AppTracer.stopTrace("MainViewModel_ShowInterstitialAd_Coroutine")
         }
-        
-        AppTracer.stopTrace("MainViewModel_ShowInterstitialAd")
+        AppTracer.stopTrace("MainViewModel_LaunchShowCoroutine")
     }
 
     fun onUserAction(action: UserAction) {
-        AppTracer.startTrace("MainViewModel_UserAction", mapOf(
-            "action" to action::class.java.simpleName
-        ))
-        
         when (action) {
             is UserAction.LoadBannerAd -> {
-                AppTracer.startTrace("MainViewModel_UserAction_LoadBanner")
+                AppTracer.startTrace("UserAction_LoadBanner")
                 loadBannerAd()
-                AppTracer.stopTrace("MainViewModel_UserAction_LoadBanner")
+                AppTracer.stopTrace("UserAction_LoadBanner")
             }
             is UserAction.LoadInterstitialAd -> {
-                AppTracer.startTrace("MainViewModel_UserAction_LoadInterstitial")
+                AppTracer.startTrace("UserAction_LoadInterstitial")
                 loadInterstitialAd()
-                AppTracer.stopTrace("MainViewModel_UserAction_LoadInterstitial")
+                AppTracer.stopTrace("UserAction_LoadInterstitial")
             }
             is UserAction.ShowInterstitialAd -> {
-                AppTracer.startTrace("MainViewModel_UserAction_ShowInterstitial")
+                AppTracer.startTrace("UserAction_ShowInterstitial")
                 showInterstitialAd()
-                AppTracer.stopTrace("MainViewModel_UserAction_ShowInterstitial")
+                AppTracer.stopTrace("UserAction_ShowInterstitial")
             }
             is UserAction.ClearMessage -> {
-                AppTracer.startTrace("MainViewModel_UserAction_ClearMessage")
+                AppTracer.startTrace("UserAction_ClearMessage")
                 _uiState.value = _uiState.value.copy(showMessage = null)
-                AppTracer.stopTrace("MainViewModel_UserAction_ClearMessage")
+                AppTracer.stopTrace("UserAction_ClearMessage")
             }
         }
-        
-        AppTracer.stopTrace("MainViewModel_UserAction")
     }
 
     override fun onCleared() {
-        AppTracer.startTrace("MainViewModel_Cleared")
+        AppTracer.startTrace("MainViewModel_OnCleared")
         super.onCleared()
-        AppTracer.stopTrace("MainViewModel_Cleared")
+        AppTracer.stopTrace("MainViewModel_OnCleared")
     }
 }
 

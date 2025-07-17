@@ -14,33 +14,33 @@ class LoadBannerAdUseCase @Inject constructor(
 ) {
     
     operator fun invoke(adConfig: AdConfig): Flow<AdLoadResult> {
-        AppTracer.startTrace("LoadBannerAd_UseCase_Invoke", mapOf(
+        AppTracer.startTrace("BannerUseCase_CallRepository", mapOf(
             "adUnitId" to adConfig.adUnitId,
             "isTestAd" to adConfig.isTestAd.toString()
         ))
         
-        return adRepository.loadBannerAd(adConfig)
+        val flow = adRepository.loadBannerAd(adConfig)
             .onEach { result ->
-                AppTracer.startTrace("LoadBannerAd_Result", mapOf(
+                AppTracer.startTrace("BannerUseCase_ProcessResult", mapOf(
                     "result" to result::class.java.simpleName,
                     "adUnitId" to adConfig.adUnitId
                 ))
-                AppTracer.stopTrace("LoadBannerAd_Result")
+                AppTracer.stopTrace("BannerUseCase_ProcessResult")
             }
-            .also {
-                AppTracer.stopTrace("LoadBannerAd_UseCase_Invoke")
-            }
+        
+        AppTracer.stopTrace("BannerUseCase_CallRepository")
+        return flow
     }
     
     fun loadTestBannerAd(): Flow<AdLoadResult> {
-        AppTracer.startTrace("LoadBannerAd_UseCase_LoadTest")
-        
-        AppTracer.startTrace("LoadBannerAd_GetTestConfig")
+        AppTracer.startTrace("BannerUseCase_GetTestConfig")
         val testConfig = AdConfig.getTestAdConfigs()[AdType.BANNER]!!
-        AppTracer.stopTrace("LoadBannerAd_GetTestConfig")
+        AppTracer.stopTrace("BannerUseCase_GetTestConfig")
         
+        AppTracer.startTrace("BannerUseCase_InvokeWithTestConfig")
         val result = invoke(testConfig)
-        AppTracer.stopTrace("LoadBannerAd_UseCase_LoadTest")
+        AppTracer.stopTrace("BannerUseCase_InvokeWithTestConfig")
+        
         return result
     }
 }
