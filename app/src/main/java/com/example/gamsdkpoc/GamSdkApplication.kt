@@ -108,41 +108,25 @@ class GamSdkApplication : Application() {
                 android.util.Log.i("GAM_SDK_INIT", "🧵 MobileAds.initialize() called on thread: ${currentThread.name}")
                 android.util.Log.d("GAM_SDK_THREAD", "Calling MobileAds.initialize() on thread: ${currentThread.name}")
                 
+                // ✅ START TRACE - Smaller slice as per Ashutosh sir's feedback
+                AppTracer.startTrace("MobileAds_Initialize", mapOf(
+                    "thread" to currentThread.name,
+                    "thread_id" to currentThread.id.toString(),
+                    "sdk_version" to "24.4.0"
+                ))
+                
                 MobileAds.initialize(this@GamSdkApplication) { initializationStatus ->
                     val callbackTime = System.currentTimeMillis()
                     val callbackThread = Thread.currentThread()
-                    
-                    // ✅ CALLBACK THREAD VALIDATION
-                    android.util.Log.i("GAM_SDK_VALIDATION", "🔍 VALIDATING CALLBACK THREAD:")
-                    android.util.Log.i("GAM_SDK_VALIDATION", "   ✓ Callback Thread: ${callbackThread.name}")
-                    android.util.Log.i("GAM_SDK_VALIDATION", "   ✓ Is Main Thread: ${callbackThread.name == "main"}")
-                    
-                    if (callbackThread.name == "main") {
-                        android.util.Log.i("GAM_SDK_VALIDATION", "✅ EXPECTED: Callback on MAIN THREAD (UI updates)")
-                    } else {
-                        android.util.Log.w("GAM_SDK_VALIDATION", "⚠️ UNEXPECTED: Callback not on main thread")
-                    }
                     
                     android.util.Log.i("GAM_SDK_INIT", "🎉 GAM SDK INITIALIZATION CALLBACK RECEIVED!")
                     android.util.Log.i("GAM_SDK_INIT", "⏰ Callback Time: ${java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.getDefault()).format(java.util.Date(callbackTime))}")
                     android.util.Log.i("GAM_SDK_INIT", "⏱️ Total Initialization Time: ${callbackTime - initStartTime}ms")
                     android.util.Log.i("GAM_SDK_INIT", "🧵 Callback Thread: ${callbackThread.name} (ID: ${callbackThread.id})")
-                    android.util.Log.i("GAM_SDK_INIT", "🏷️ Callback Thread Properties:")
-                    android.util.Log.i("GAM_SDK_INIT", "   - Is Background: ${callbackThread.isDaemon}")
-                    android.util.Log.i("GAM_SDK_INIT", "   - Priority: ${callbackThread.priority}")
-                    
-                    android.util.Log.d("GAM_SDK_THREAD", "GAM SDK initialization callback on thread: ${callbackThread.name} (ID: ${callbackThread.id})")
-                    android.util.Log.d("GAM_SDK_THREAD", "Callback thread details - IsBackground: ${callbackThread.isDaemon}, Priority: ${callbackThread.priority}")
-                    
-                    AppTracer.startTrace("GAM_SDK_Initialization_Complete", mapOf(
-                        "callback_thread" to callbackThread.name,
-                        "callback_thread_id" to callbackThread.id.toString()
-                    ))
                     
                     val adapterStatusMap = initializationStatus.adapterStatusMap
                     android.util.Log.i("GAM_SDK_INIT", "📊 Initialization Status:")
                     android.util.Log.i("GAM_SDK_INIT", "   - Total Adapters: ${adapterStatusMap.size}")
-                    android.util.Log.d("GAM_SDK", "GAM SDK initialization completed with ${adapterStatusMap.size} adapters")
                     
                     var readyCount = 0
                     var notReadyCount = 0
@@ -152,7 +136,7 @@ class GamSdkApplication : Application() {
                         val state = status?.initializationState?.name ?: "UNKNOWN"
                         val description = status?.description ?: "No description"
                         
-                        android.util.Log.i("GAM_SDK_INIT", "   📱 ${adapterClass.simpleName}: $state")
+                        android.util.Log.i("GAM_SDK_INIT", "   📱 $adapterClass: $state")
                         if (description.isNotEmpty()) {
                             android.util.Log.i("GAM_SDK_INIT", "      💬 $description")
                         }
@@ -166,21 +150,11 @@ class GamSdkApplication : Application() {
                     }
                     
                     android.util.Log.i("GAM_SDK_INIT", "📈 Summary: $readyCount Ready, $notReadyCount Not Ready")
-                    
-                    // ✅ FINAL VALIDATION SUMMARY
-                    android.util.Log.i("GAM_SDK_VALIDATION", "📋 FINAL COMPLIANCE SUMMARY:")
-                    android.util.Log.i("GAM_SDK_VALIDATION", "   ✅ Initialization: Background Thread (${backgroundThread.name})")
-                    android.util.Log.i("GAM_SDK_VALIDATION", "   ✅ Callback: Main Thread (${callbackThread.name})")
-                    android.util.Log.i("GAM_SDK_VALIDATION", "   ✅ Dispatcher: Dispatchers.IO")
-                    android.util.Log.i("GAM_SDK_VALIDATION", "   ✅ Non-blocking: TRUE")
-                    android.util.Log.i("GAM_SDK_VALIDATION", "   ✅ Google Best Practices: FOLLOWED")
-                    
                     android.util.Log.i("GAM_SDK_INIT", "✅ GAM SDK INITIALIZATION COMPLETED SUCCESSFULLY!")
                     android.util.Log.i("GAM_SDK_INIT", "🧵 Completed on Thread: ${callbackThread.name}")
                     
-                    android.util.Log.d("GAM_SDK", "✅ GAM SDK initialization completed successfully on ${callbackThread.name}")
-                    AppTracer.stopTrace("GAM_SDK_Initialization_Complete")
-                    AppTracer.stopTrace("GAM_SDK_Initialization")
+                    // ✅ END TRACE - Both endSection() and endAsyncSection() as per Ashutosh sir's feedback
+                    AppTracer.stopTrace("MobileAds_Initialize")
                 }
                 
                 val postCallTime = System.currentTimeMillis()
