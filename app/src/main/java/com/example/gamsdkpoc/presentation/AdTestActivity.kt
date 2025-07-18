@@ -24,227 +24,227 @@ class AdTestActivity : ComponentActivity() {
     private var interstitialAd: InterstitialAd? = null
     
     override fun onCreate(savedInstanceState: Bundle?) {
-        AppTracer.startTrace("AdTestActivity_onCreate")
+        AppTracer.startAsyncTrace("AdTestActivity_onCreate")
         super.onCreate(savedInstanceState)
-        
-        AppTracer.startTrace("AdTestActivity_CreateLayout")
+
+        AppTracer.startAsyncTrace("AdTestActivity_CreateLayout")
         val layout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(32, 32, 32, 32)
         }
-        AppTracer.stopTrace("AdTestActivity_CreateLayout")
+        AppTracer.stopAsyncTrace("AdTestActivity_CreateLayout")
         
-        AppTracer.startTrace("AdTestActivity_CreateAdContainer")
+        AppTracer.startAsyncTrace("AdTestActivity_CreateAdContainer")
         adContainer = FrameLayout(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             )
         }
-        AppTracer.stopTrace("AdTestActivity_CreateAdContainer")
+        AppTracer.stopAsyncTrace("AdTestActivity_CreateAdContainer")
         
-        AppTracer.startTrace("AdTestActivity_CreateButtons")
+        AppTracer.startAsyncTrace("AdTestActivity_CreateButtons")
         val loadBannerBtn = Button(this).apply {
             text = "Load Test Banner Ad"
             setOnClickListener { 
-                AppTracer.startTrace("AdTestActivity_BannerButtonClick")
+                AppTracer.startAsyncTrace("AdTestActivity_BannerButtonClick")
                 loadBannerAd()
-                AppTracer.stopTrace("AdTestActivity_BannerButtonClick")
+                AppTracer.stopAsyncTrace("AdTestActivity_BannerButtonClick")
             }
         }
         
         val loadInterstitialBtn = Button(this).apply {
             text = "Load Test Interstitial Ad"
             setOnClickListener { 
-                AppTracer.startTrace("AdTestActivity_InterstitialButtonClick")
+                AppTracer.startAsyncTrace("AdTestActivity_InterstitialButtonClick")
                 loadInterstitialAd()
-                AppTracer.stopTrace("AdTestActivity_InterstitialButtonClick")
+                AppTracer.stopAsyncTrace("AdTestActivity_InterstitialButtonClick")
             }
         }
         
         val showInterstitialBtn = Button(this).apply {
             text = "Show Interstitial Ad"
             setOnClickListener { 
-                AppTracer.startTrace("AdTestActivity_ShowButtonClick")
+                AppTracer.startAsyncTrace("AdTestActivity_ShowButtonClick")
                 showInterstitialAd()
-                AppTracer.stopTrace("AdTestActivity_ShowButtonClick")
+                AppTracer.stopAsyncTrace("AdTestActivity_ShowButtonClick")
             }
         }
-        AppTracer.stopTrace("AdTestActivity_CreateButtons")
+        AppTracer.stopAsyncTrace("AdTestActivity_CreateButtons")
         
-        AppTracer.startTrace("AdTestActivity_AddViewsToLayout")
+        AppTracer.startAsyncTrace("AdTestActivity_AddViewsToLayout")
         layout.addView(loadBannerBtn)
         layout.addView(loadInterstitialBtn)
         layout.addView(showInterstitialBtn)
         layout.addView(adContainer)
-        AppTracer.stopTrace("AdTestActivity_AddViewsToLayout")
+        AppTracer.stopAsyncTrace("AdTestActivity_AddViewsToLayout")
         
-        AppTracer.startTrace("AdTestActivity_SetContentView")
+        AppTracer.startAsyncTrace("AdTestActivity_SetContentView")
         setContentView(layout)
-        AppTracer.stopTrace("AdTestActivity_SetContentView")
+        AppTracer.stopAsyncTrace("AdTestActivity_SetContentView")
         
-        AppTracer.stopTrace("AdTestActivity_onCreate")
+        AppTracer.stopAsyncTrace("AdTestActivity_onCreate")
     }
     
     private fun loadBannerAd() {
-        AppTracer.startTrace("AdTest_LoadBanner")
+        AppTracer.startAsyncTrace("AdTest_LoadBanner")
         
-        AppTracer.startTrace("AdTest_CleanupPreviousAd")
+        AppTracer.startAsyncTrace("AdTest_CleanupPreviousAd")
         bannerAdView?.destroy()
         adContainer.removeAllViews()
-        AppTracer.stopTrace("AdTest_CleanupPreviousAd")
+        AppTracer.stopAsyncTrace("AdTest_CleanupPreviousAd")
         
-        AppTracer.startTrace("AdTest_CreateBannerAdView")
+        AppTracer.startAsyncTrace("AdTest_CreateBannerAdView")
         bannerAdView = AdView(this).apply {
-            AppTracer.startTrace("AdTest_SetBannerAdUnitId")
+            AppTracer.startAsyncTrace("AdTest_SetBannerAdUnitId")
             adUnitId = "ca-app-pub-3940256099942544/9214589741"
-            AppTracer.stopTrace("AdTest_SetBannerAdUnitId")
+            AppTracer.stopAsyncTrace("AdTest_SetBannerAdUnitId")
             
-            AppTracer.startTrace("AdTest_SetBannerAdSize")
+            AppTracer.startAsyncTrace("AdTest_SetBannerAdSize")
             setAdSize(AdSize.BANNER)
-            AppTracer.stopTrace("AdTest_SetBannerAdSize")
+            AppTracer.stopAsyncTrace("AdTest_SetBannerAdSize")
             
-            AppTracer.startTrace("AdTest_SetBannerListener")
+            AppTracer.startAsyncTrace("AdTest_SetBannerListener")
             adListener = object : AdListener() {
                 override fun onAdLoaded() {
-                    AppTracer.startTrace("AdTest_BannerLoaded")
+                    AppTracer.startAsyncTrace("AdTest_BannerLoaded")
                     Log.d("AdTest", "Banner ad loaded successfully")
                     Toast.makeText(this@AdTestActivity, "Banner Ad Loaded!", Toast.LENGTH_SHORT).show()
-                    AppTracer.stopTrace("AdTest_BannerLoaded")
+                    AppTracer.stopAsyncTrace("AdTest_BannerLoaded")
                 }
                 
                 override fun onAdFailedToLoad(error: LoadAdError) {
-                    AppTracer.startTrace("AdTest_BannerFailed", mapOf(
+                    AppTracer.startAsyncTrace("AdTest_BannerFailed", mapOf(
                         "errorCode" to error.code.toString(),
                         "errorMessage" to error.message
                     ))
                     Log.e("AdTest", "Banner ad failed to load: ${error.message}")
                     Toast.makeText(this@AdTestActivity, "Banner Failed: ${error.message}", Toast.LENGTH_LONG).show()
-                    AppTracer.stopTrace("AdTest_BannerFailed")
+                    AppTracer.stopAsyncTrace("AdTest_BannerFailed")
                 }
                 
                 override fun onAdClicked() {
-                    AppTracer.startTrace("AdTest_BannerClicked")
-                    AppTracer.stopTrace("AdTest_BannerClicked")
+                    AppTracer.startAsyncTrace("AdTest_BannerClicked")
+                    AppTracer.stopAsyncTrace("AdTest_BannerClicked")
                 }
                 
                 override fun onAdImpression() {
-                    AppTracer.startTrace("AdTest_BannerImpression")
-                    AppTracer.stopTrace("AdTest_BannerImpression")
+                    AppTracer.startAsyncTrace("AdTest_BannerImpression")
+                    AppTracer.stopAsyncTrace("AdTest_BannerImpression")
                 }
             }
-            AppTracer.stopTrace("AdTest_SetBannerListener")
+            AppTracer.stopAsyncTrace("AdTest_SetBannerListener")
         }
-        AppTracer.stopTrace("AdTest_CreateBannerAdView")
+        AppTracer.stopAsyncTrace("AdTest_CreateBannerAdView")
         
-        AppTracer.startTrace("AdTest_AddBannerToContainer")
+        AppTracer.startAsyncTrace("AdTest_AddBannerToContainer")
         adContainer.addView(bannerAdView)
-        AppTracer.stopTrace("AdTest_AddBannerToContainer")
+        AppTracer.stopAsyncTrace("AdTest_AddBannerToContainer")
         
-        AppTracer.startTrace("AdTest_CreateBannerRequest")
+        AppTracer.startAsyncTrace("AdTest_CreateBannerRequest")
         val adRequest = AdRequest.Builder().build()
-        AppTracer.stopTrace("AdTest_CreateBannerRequest")
+        AppTracer.stopAsyncTrace("AdTest_CreateBannerRequest")
         
-        AppTracer.startTrace("AdTest_LoadBannerRequest")
+        AppTracer.startAsyncTrace("AdTest_LoadBannerRequest")
         bannerAdView?.loadAd(adRequest)
-        AppTracer.stopTrace("AdTest_LoadBannerRequest")
+        AppTracer.stopAsyncTrace("AdTest_LoadBannerRequest")
         
-        AppTracer.stopTrace("AdTest_LoadBanner")
+        AppTracer.stopAsyncTrace("AdTest_LoadBanner")
     }
     
     private fun loadInterstitialAd() {
-        AppTracer.startTrace("AdTest_LoadInterstitial")
+        AppTracer.startAsyncTrace("AdTest_LoadInterstitial")
         
-        AppTracer.startTrace("AdTest_CreateInterstitialRequest")
+        AppTracer.startAsyncTrace("AdTest_CreateInterstitialRequest")
         val adRequest = AdRequest.Builder().build()
-        AppTracer.stopTrace("AdTest_CreateInterstitialRequest")
+        AppTracer.stopAsyncTrace("AdTest_CreateInterstitialRequest")
         
-        AppTracer.startTrace("AdTest_LoadInterstitialAd")
+        AppTracer.startAsyncTrace("AdTest_LoadInterstitialAd")
         InterstitialAd.load(
             this,
             "ca-app-pub-3940256099942544/1033173712",
             adRequest,
             object : InterstitialAdLoadCallback() {
                 override fun onAdLoaded(ad: InterstitialAd) {
-                    AppTracer.startTrace("AdTest_InterstitialLoaded")
+                    AppTracer.startAsyncTrace("AdTest_InterstitialLoaded")
                     Log.d("AdTest", "Interstitial ad loaded successfully")
                     Toast.makeText(this@AdTestActivity, "Interstitial Ad Loaded!", Toast.LENGTH_SHORT).show()
                     interstitialAd = ad
                     
-                    AppTracer.startTrace("AdTest_SetInterstitialCallbacks")
+                    AppTracer.startAsyncTrace("AdTest_SetInterstitialCallbacks")
                     ad.fullScreenContentCallback = object : FullScreenContentCallback() {
                         override fun onAdClicked() {
-                            AppTracer.startTrace("AdTest_InterstitialClicked")
-                            AppTracer.stopTrace("AdTest_InterstitialClicked")
+                            AppTracer.startAsyncTrace("AdTest_InterstitialClicked")
+                            AppTracer.stopAsyncTrace("AdTest_InterstitialClicked")
                         }
                         
                         override fun onAdDismissedFullScreenContent() {
-                            AppTracer.startTrace("AdTest_InterstitialDismissed")
+                            AppTracer.startAsyncTrace("AdTest_InterstitialDismissed")
                             interstitialAd = null
-                            AppTracer.stopTrace("AdTest_InterstitialDismissed")
+                            AppTracer.stopAsyncTrace("AdTest_InterstitialDismissed")
                         }
                         
                         override fun onAdImpression() {
-                            AppTracer.startTrace("AdTest_InterstitialImpression")
-                            AppTracer.stopTrace("AdTest_InterstitialImpression")
+                            AppTracer.startAsyncTrace("AdTest_InterstitialImpression")
+                            AppTracer.stopAsyncTrace("AdTest_InterstitialImpression")
                         }
                         
                         override fun onAdShowedFullScreenContent() {
-                            AppTracer.startTrace("AdTest_InterstitialShowed")
-                            AppTracer.stopTrace("AdTest_InterstitialShowed")
+                            AppTracer.startAsyncTrace("AdTest_InterstitialShowed")
+                            AppTracer.stopAsyncTrace("AdTest_InterstitialShowed")
                         }
                     }
-                    AppTracer.stopTrace("AdTest_SetInterstitialCallbacks")
-                    AppTracer.stopTrace("AdTest_InterstitialLoaded")
+                    AppTracer.stopAsyncTrace("AdTest_SetInterstitialCallbacks")
+                    AppTracer.stopAsyncTrace("AdTest_InterstitialLoaded")
                 }
                 
                 override fun onAdFailedToLoad(error: LoadAdError) {
-                    AppTracer.startTrace("AdTest_InterstitialFailed", mapOf(
+                    AppTracer.startAsyncTrace("AdTest_InterstitialFailed", mapOf(
                         "errorCode" to error.code.toString(),
                         "errorMessage" to error.message
                     ))
                     Log.e("AdTest", "Interstitial ad failed to load: ${error.message}")
                     Toast.makeText(this@AdTestActivity, "Interstitial Failed: ${error.message}", Toast.LENGTH_LONG).show()
                     interstitialAd = null
-                    AppTracer.stopTrace("AdTest_InterstitialFailed")
+                    AppTracer.stopAsyncTrace("AdTest_InterstitialFailed")
                 }
             }
         )
-        AppTracer.stopTrace("AdTest_LoadInterstitialAd")
+        AppTracer.stopAsyncTrace("AdTest_LoadInterstitialAd")
         
-        AppTracer.stopTrace("AdTest_LoadInterstitial")
+        AppTracer.stopAsyncTrace("AdTest_LoadInterstitial")
     }
     
     private fun showInterstitialAd() {
-        AppTracer.startTrace("AdTest_ShowInterstitial")
+        AppTracer.startAsyncTrace("AdTest_ShowInterstitial")
         
-        AppTracer.startTrace("AdTest_CheckInterstitialAvailable")
+        AppTracer.startAsyncTrace("AdTest_CheckInterstitialAvailable")
         if (interstitialAd != null) {
-            AppTracer.stopTrace("AdTest_CheckInterstitialAvailable")
+            AppTracer.stopAsyncTrace("AdTest_CheckInterstitialAvailable")
             
-            AppTracer.startTrace("AdTest_ShowInterstitialAd")
+            AppTracer.startAsyncTrace("AdTest_ShowInterstitialAd")
             interstitialAd?.show(this)
             Toast.makeText(this, "Showing Interstitial Ad", Toast.LENGTH_SHORT).show()
-            AppTracer.stopTrace("AdTest_ShowInterstitialAd")
+            AppTracer.stopAsyncTrace("AdTest_ShowInterstitialAd")
         } else {
-            AppTracer.stopTrace("AdTest_CheckInterstitialAvailable")
+            AppTracer.stopAsyncTrace("AdTest_CheckInterstitialAvailable")
             
-            AppTracer.startTrace("AdTest_NoInterstitialAvailable")
+            AppTracer.startAsyncTrace("AdTest_NoInterstitialAvailable")
             Toast.makeText(this, "No Interstitial Ad Loaded", Toast.LENGTH_SHORT).show()
-            AppTracer.stopTrace("AdTest_NoInterstitialAvailable")
+            AppTracer.stopAsyncTrace("AdTest_NoInterstitialAvailable")
         }
         
-        AppTracer.stopTrace("AdTest_ShowInterstitial")
+        AppTracer.stopAsyncTrace("AdTest_ShowInterstitial")
     }
     
     override fun onDestroy() {
-        AppTracer.startTrace("AdTestActivity_onDestroy")
+        AppTracer.startAsyncTrace("AdTestActivity_onDestroy")
         
-        AppTracer.startTrace("AdTestActivity_DestroyBannerAd")
+        AppTracer.startAsyncTrace("AdTestActivity_DestroyBannerAd")
         bannerAdView?.destroy()
-        AppTracer.stopTrace("AdTestActivity_DestroyBannerAd")
+        AppTracer.stopAsyncTrace("AdTestActivity_DestroyBannerAd")
         
         super.onDestroy()
-        AppTracer.stopTrace("AdTestActivity_onDestroy")
+        AppTracer.stopAsyncTrace("AdTestActivity_onDestroy")
     }
 }

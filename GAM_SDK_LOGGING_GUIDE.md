@@ -275,4 +275,13 @@ adb logcat -c && adb logcat -s "AppTracer_Performance" "AppTracer_Error"
 adb logcat -c && adb logcat -s "AppTracer_StateChange" "GAM_SDK_LIFECYCLE"
 ```
 
-**अब आप comprehensive logging के साथ GAM SDK को properly test कर सकते हैं! 🎯**
+```bash
+adb shell am force-stop com.example.gamsdkpoc && adb logcat -c && adb logcat -s "GAM_SDK_INIT" "GAM_SDK_LIFECYCLE" "GAM_SDK_VALIDATION" "AppTracer" "AppTracer_Performance" "AppTracer_StateChange" "AppTracer_Error" & sleep 2 && adb shell am start -n com.example.gamsdkpoc/.MainActivity
+```
+```bash
+adb shell am force-stop com.example.gamsdkpoc && adb logcat -c
+```
+
+```bash
+adb logcat -s "GAM_SDK_INIT" "GAM_SDK_LIFECYCLE" "GAM_SDK_VALIDATION" "AppTracer" "AppTracer_Performance" "AppTracer_StateChange" "AppTracer_Error" & sleep 2 && adb shell am start -n com.example.gamsdkpoc/.MainActivity
+```

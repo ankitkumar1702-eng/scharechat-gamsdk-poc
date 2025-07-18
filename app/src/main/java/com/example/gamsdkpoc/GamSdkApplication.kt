@@ -19,7 +19,7 @@ class GamSdkApplication : Application() {
         android.util.Log.i("GAM_SDK_LIFECYCLE", "🚀 Application.onCreate() started at: ${java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.getDefault()).format(java.util.Date(startTime))}")
         android.util.Log.i("GAM_SDK_LIFECYCLE", "📱 App Process: ${android.os.Process.myPid()}, Thread: ${Thread.currentThread().name}")
         
-        AppTracer.startTrace("App_Startup", mapOf("phase" to "application_create"))
+        AppTracer.startAsyncTrace("App_Startup", mapOf("phase" to "application_create"))
         
         android.util.Log.i("GAM_SDK_LIFECYCLE", "🔧 Initializing Enhanced AppTracer...")
         AppTracer.initialize(this)
@@ -41,7 +41,7 @@ class GamSdkApplication : Application() {
         val endTime = System.currentTimeMillis()
         android.util.Log.i("GAM_SDK_LIFECYCLE", "🏁 Application.onCreate() completed in ${endTime - startTime}ms at: ${java.text.SimpleDateFormat("HH:mm:ss.SSS", java.util.Locale.getDefault()).format(java.util.Date(endTime))}")
         
-        AppTracer.stopTrace("App_Startup")
+        AppTracer.stopAsyncTrace("App_Startup")
     }
 
     // GAM SDK initialization moved to MainActivity for better performance
@@ -53,14 +53,14 @@ class GamSdkApplication : Application() {
     }
 
     override fun onLowMemory() {
-        AppTracer.startTrace("App_LowMemory")
+        AppTracer.startAsyncTrace("App_LowMemory")
         super.onLowMemory()
-        AppTracer.stopTrace("App_LowMemory")
+        AppTracer.stopAsyncTrace("App_LowMemory")
     }
 
     override fun onTrimMemory(level: Int) {
-        AppTracer.startTrace("App_TrimMemory", mapOf("level" to level.toString()))
+        AppTracer.startAsyncTrace("App_TrimMemory", mapOf("level" to level.toString()))
         super.onTrimMemory(level)
-        AppTracer.stopTrace("App_TrimMemory")
+        AppTracer.stopAsyncTrace("App_TrimMemory")
     }
 }

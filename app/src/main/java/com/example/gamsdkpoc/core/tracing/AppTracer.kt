@@ -2,6 +2,7 @@ package com.example.gamsdkpoc.core.tracing
 
 import android.app.ActivityManager
 import android.content.Context
+import android.os.Build
 import android.os.Debug
 import android.os.Process
 import android.os.Trace
@@ -15,10 +16,14 @@ import java.util.concurrent.atomic.AtomicLong
 object AppTracer {
 
     private val asyncTraceCookies = ConcurrentHashMap<String, Int>()
+    private val asyncTraceFullTags = ConcurrentHashMap<String, String>()
     private val traceMetrics = ConcurrentHashMap<String, TraceMetrics>()
     private val stateChanges = ConcurrentHashMap<String, StateChangeInfo>()
+    private val activeTraces = ConcurrentHashMap<String, Long>()
+    private val lastTraceTime = ConcurrentHashMap<String, Long>()
     private val traceLock = Any()
     private val traceCounter = AtomicLong(0)
+    private const val DUPLICATE_THRESHOLD_MS = 1000L
     private const val TAG = "AppTracer"
     private const val PERF_TAG = "AppTracer_Performance"
     private const val STATE_TAG = "AppTracer_StateChange"
@@ -54,29 +59,50 @@ object AppTracer {
 
     fun startTrace(tag: String, attributes: Map<String, String>? = null) {
         try {
-            val traceId = traceCounter.incrementAndGet()
-            val currentThread = Thread.currentThread()
-            val startTime = System.currentTimeMillis()
-            val startMemory = getMemoryUsage()
-            
-            val enhancedAttributes = buildEnhancedAttributes(attributes, traceId, currentThread)
-            val fullTag = buildTag(tag, enhancedAttributes)
-            
-            traceMetrics[tag] = TraceMetrics(
-                startTime = startTime,
-                startMemory = startMemory,
-                threadName = currentThread.name,
-                threadId = currentThread.id
-            )
-            
-            Log.d(TAG, "🔥 Starting trace: $fullTag")
-            Log.d(PERF_TAG, "📊 Trace[$traceId] START: $tag")
-            Log.d(PERF_TAG, "   ⏰ Time: ${timeFormatter.format(Date(startTime))}")
-            Log.d(PERF_TAG, "   🧵 Thread: ${currentThread.name} (ID: ${currentThread.id})")
-            Log.d(PERF_TAG, "   💾 Memory: ${formatMemory(startMemory)}")
-            
-            // Use regular section for same-thread operations
-            Trace.beginSection(fullTag)
+            synchronized(traceLock) {
+                val currentTime = System.currentTimeMillis()
+                val lastTime = lastTraceTime[tag] ?: 0
+                
+                // Check for rapid duplicates within threshold
+                if (currentTime - lastTime < DUPLICATE_THRESHOLD_MS) {
+                    Log.d(TAG, "⚠️ Duplicate trace within ${DUPLICATE_THRESHOLD_MS}ms, skipping: $tag")
+                    return
+                }
+                
+                // Check if trace is already active
+                if (activeTraces.containsKey(tag)) {
+                    Log.d(TAG, "⚠️ Trace already active, skipping: $tag")
+                    return
+                }
+                
+                val traceId = traceCounter.incrementAndGet()
+                val currentThread = Thread.currentThread()
+                val startTime = currentTime
+                val startMemory = getMemoryUsage()
+                
+                // Update last trace time and mark as active
+                lastTraceTime[tag] = currentTime
+                activeTraces[tag] = startTime
+                
+                val enhancedAttributes = buildEnhancedAttributes(attributes, traceId, currentThread)
+                val fullTag = buildTag(tag, enhancedAttributes)
+                
+                traceMetrics[tag] = TraceMetrics(
+                    startTime = startTime,
+                    startMemory = startMemory,
+                    threadName = currentThread.name,
+                    threadId = currentThread.id
+                )
+                
+                Log.d(TAG, "🔥 Starting trace: $fullTag")
+                Log.d(PERF_TAG, "📊 Trace[$traceId] START: $tag")
+                Log.d(PERF_TAG, "   ⏰ Time: ${timeFormatter.format(Date(startTime))}")
+                Log.d(PERF_TAG, "   🧵 Thread: ${currentThread.name} (ID: ${currentThread.id})")
+                Log.d(PERF_TAG, "   💾 Memory: ${formatMemory(startMemory)}")
+                
+                // Use regular section for same-thread operations
+                Trace.beginSection(fullTag)
+            }
         } catch (e: Exception) {
             Log.e(ERROR_TAG, "❌ Error starting trace: $tag", e)
         }
@@ -93,32 +119,43 @@ object AppTracer {
 
     fun stopTrace(tag: String) {
         try {
-            val endTime = System.currentTimeMillis()
-            val endMemory = getMemoryUsage()
-            
-            val metrics = traceMetrics[tag]
-            if (metrics != null) {
-                metrics.endTime = endTime
-                metrics.endMemory = endMemory
-                metrics.duration = endTime - metrics.startTime
-                metrics.memoryDelta = endMemory - metrics.startMemory
-                
-                Log.d(TAG, "⏹️ Stopping trace: $tag")
-                Log.d(PERF_TAG, "📊 Trace COMPLETE: $tag")
-                Log.d(PERF_TAG, "   ⏱️ Duration: ${metrics.duration}ms")
-                Log.d(PERF_TAG, "   💾 Memory Delta: ${formatMemoryDelta(metrics.memoryDelta)}")
-                Log.d(PERF_TAG, "   🧵 Thread: ${metrics.threadName}")
-                
-                if (metrics.duration > 100) {
-                    Log.w(PERF_TAG, "⚠️ SLOW OPERATION: $tag took ${metrics.duration}ms")
+            synchronized(traceLock) {
+                // Check if trace is active
+                if (!activeTraces.containsKey(tag)) {
+                    Log.d(TAG, "⚠️ Trace not active, skipping stop: $tag")
+                    return
                 }
                 
-                if (metrics.memoryDelta > 1024 * 1024) { // 1MB
-                    Log.w(PERF_TAG, "⚠️ HIGH MEMORY USAGE: $tag used ${formatMemory(metrics.memoryDelta)}")
+                val endTime = System.currentTimeMillis()
+                val endMemory = getMemoryUsage()
+                
+                // Remove from active traces
+                activeTraces.remove(tag)
+                
+                val metrics = traceMetrics[tag]
+                if (metrics != null) {
+                    metrics.endTime = endTime
+                    metrics.endMemory = endMemory
+                    metrics.duration = endTime - metrics.startTime
+                    metrics.memoryDelta = endMemory - metrics.startMemory
+                    
+                    Log.d(TAG, "⏹️ Stopping trace: $tag")
+                    Log.d(PERF_TAG, "📊 Trace COMPLETE: $tag")
+                    Log.d(PERF_TAG, "   ⏱️ Duration: ${metrics.duration}ms")
+                    Log.d(PERF_TAG, "   💾 Memory Delta: ${formatMemoryDelta(metrics.memoryDelta)}")
+                    Log.d(PERF_TAG, "   🧵 Thread: ${metrics.threadName}")
+                    
+                    if (metrics.duration > 100) {
+                        Log.w(PERF_TAG, "⚠️ SLOW OPERATION: $tag took ${metrics.duration}ms")
+                    }
+                    
+                    if (metrics.memoryDelta > 1024 * 1024) { // 1MB
+                        Log.w(PERF_TAG, "⚠️ HIGH MEMORY USAGE: $tag used ${formatMemory(metrics.memoryDelta)}")
+                    }
                 }
+                
+                Trace.endSection()
             }
-            
-            Trace.endSection()
         } catch (e: Exception) {
             Log.e(ERROR_TAG, "❌ Error ending trace: $tag", e)
         }
@@ -127,28 +164,48 @@ object AppTracer {
     // Use this for operations that might switch threads (like coroutines, async operations)
     fun startAsyncTrace(tag: String, attributes: Map<String, String>? = null): Int {
         return try {
-            val traceId = traceCounter.incrementAndGet()
-            val currentThread = Thread.currentThread()
-            val startTime = System.currentTimeMillis()
-            val startMemory = getMemoryUsage()
-            
-            val enhancedAttributes = buildEnhancedAttributes(attributes, traceId, currentThread)
-            
-            traceMetrics[tag] = TraceMetrics(
-                startTime = startTime,
-                startMemory = startMemory,
-                threadName = currentThread.name,
-                threadId = currentThread.id
-            )
-            
-            Log.d(TAG, "🔄 Starting ASYNC trace: $tag")
-            Log.d(PERF_TAG, "📊 AsyncTrace[$traceId] START: $tag")
-            Log.d(PERF_TAG, "   ⏰ Time: ${timeFormatter.format(Date(startTime))}")
-            Log.d(PERF_TAG, "   🧵 Thread: ${currentThread.name} (ID: ${currentThread.id})")
-            Log.d(PERF_TAG, "   💾 Memory: ${formatMemory(startMemory)}")
-            Log.d(PERF_TAG, "   🔄 Type: ASYNC (Thread-switching capable)")
-            
-            beginAsyncSection(tag, enhancedAttributes)
+            synchronized(traceLock) {
+                val currentTime = System.currentTimeMillis()
+                val lastTime = lastTraceTime[tag] ?: 0
+                
+                // Check for rapid duplicates within threshold
+                if (currentTime - lastTime < DUPLICATE_THRESHOLD_MS) {
+                    Log.d(TAG, "⚠️ Duplicate async trace within ${DUPLICATE_THRESHOLD_MS}ms, skipping: $tag")
+                    return -1
+                }
+                
+                // Check if async trace is already active
+                if (asyncTraceCookies.containsKey(tag)) {
+                    Log.d(TAG, "⚠️ Async trace already active, skipping: $tag")
+                    return asyncTraceCookies[tag] ?: -1
+                }
+                
+                val traceId = traceCounter.incrementAndGet()
+                val currentThread = Thread.currentThread()
+                val startTime = currentTime
+                val startMemory = getMemoryUsage()
+                
+                // Update last trace time
+                lastTraceTime[tag] = currentTime
+                
+                val enhancedAttributes = buildEnhancedAttributes(attributes, traceId, currentThread)
+                
+                traceMetrics[tag] = TraceMetrics(
+                    startTime = startTime,
+                    startMemory = startMemory,
+                    threadName = currentThread.name,
+                    threadId = currentThread.id
+                )
+                
+                Log.d(TAG, "🔄 Starting ASYNC trace: $tag")
+                Log.d(PERF_TAG, "📊 AsyncTrace[$traceId] START: $tag")
+                Log.d(PERF_TAG, "   ⏰ Time: ${timeFormatter.format(Date(startTime))}")
+                Log.d(PERF_TAG, "   🧵 Thread: ${currentThread.name} (ID: ${currentThread.id})")
+                Log.d(PERF_TAG, "   💾 Memory: ${formatMemory(startMemory)}")
+                Log.d(PERF_TAG, "   🔄 Type: ASYNC (Thread-switching capable)")
+                
+                beginAsyncSection(tag, enhancedAttributes)
+            }
         } catch (e: Exception) {
             Log.e(ERROR_TAG, "❌ Error starting async trace: $tag", e)
             -1
@@ -221,8 +278,10 @@ object AppTracer {
             }
             
             val traceTag = "StateChange_${context}_${toState}"
-            Trace.beginAsyncSection(traceTag, timestamp.toInt())
-            Trace.endAsyncSection(traceTag, timestamp.toInt())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Trace.beginAsyncSection(traceTag, timestamp.toInt())
+                Trace.endAsyncSection(traceTag, timestamp.toInt())
+            }
             
         } catch (e: Exception) {
             Log.e(ERROR_TAG, "❌ Error tracing state change: $context", e)
@@ -254,8 +313,8 @@ object AppTracer {
                 "component" to component
             )
             
-            startTrace(traceTag, enhancedData)
-            stopTrace(traceTag)
+            startAsyncTrace(traceTag, enhancedData)
+            stopAsyncTrace(traceTag)
             
         } catch (e: Exception) {
             Log.e(ERROR_TAG, "❌ Error tracing user action: $action", e)
@@ -282,8 +341,10 @@ object AppTracer {
             }
             
             val traceTag = "Error_${context}_${error.javaClass.simpleName}"
-            Trace.beginAsyncSection(traceTag, timestamp.toInt())
-            Trace.endAsyncSection(traceTag, timestamp.toInt())
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                Trace.beginAsyncSection(traceTag, timestamp.toInt())
+                Trace.endAsyncSection(traceTag, timestamp.toInt())
+            }
             
         } catch (e: Exception) {
             Log.e(ERROR_TAG, "❌ Error tracing error: $context", e)
@@ -293,13 +354,23 @@ object AppTracer {
     fun beginAsyncSection(tag: String, attributes: Map<String, String>? = null): Int {
         return try {
             synchronized(traceLock) {
+                // Check if already exists to prevent duplicates
+                if (asyncTraceCookies.containsKey(tag)) {
+                    Log.w(TAG, "⚠️ Async trace already active: $tag")
+                    return asyncTraceCookies[tag] ?: -1
+                }
+                
                 val cookie = generateCookie(tag)
                 val fullTag = buildTag(tag, attributes)
                 Log.d(TAG, "🔄 Beginning async section: $fullTag with cookie: $cookie")
                 
-                Trace.beginAsyncSection(fullTag, cookie)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                    Trace.beginAsyncSection(fullTag, cookie)
+                }
                 asyncTraceCookies[tag] = cookie
+                asyncTraceFullTags[tag] = fullTag
                 Log.d(TAG, "✅ Async section started successfully: $fullTag")
+                Log.d(TAG, "🔑 Stored cookie for '$tag': $cookie")
                 cookie
             }
         } catch (e: Exception) {
@@ -312,13 +383,27 @@ object AppTracer {
         try {
             synchronized(traceLock) {
                 val cookie = asyncTraceCookies.remove(tag)
-                if (cookie != null) {
+                val fullTag = asyncTraceFullTags.remove(tag)
+                
+                Log.d(TAG, "🔍 Attempting to end async section: $tag")
+                Log.d(TAG, "🔑 Retrieved cookie for '$tag': $cookie")
+                Log.d(TAG, "🏷️ Retrieved fullTag for '$tag': $fullTag")
+                
+                if (cookie != null && fullTag != null) {
                     Log.d(TAG, "⏹️ Ending async section: $tag with cookie: $cookie")
-                    val fullTag = buildTag(tag, null)
-                    Trace.endAsyncSection(fullTag, cookie)
+                    Log.d(TAG, "🔄 Using stored full tag: $fullTag")
+                    
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        Trace.endAsyncSection(fullTag, cookie)
+                    }
+                    
                     Log.d(TAG, "✅ Async section ended successfully: $fullTag")
+                    Log.d(TAG, "🎯 Perfetto should now show proper duration for: $tag")
                 } else {
-                    Log.w(TAG, "⚠️ No cookie found for async trace: $tag")
+                    Log.w(TAG, "⚠️ Missing data for async trace: $tag")
+                    Log.w(TAG, "   🔑 Cookie: $cookie")
+                    Log.w(TAG, "   🏷️ FullTag: $fullTag")
+                    Log.w(TAG, "   📊 Active async traces: ${asyncTraceCookies.keys}")
                 }
             }
         } catch (e: Exception) {
@@ -331,14 +416,14 @@ object AppTracer {
         attributes: Map<String, String>? = null,
         block: () -> T
     ): T {
-        startTrace(tag, attributes)
+        startAsyncTrace(tag, attributes)
         return try {
             block()
         } catch (e: Exception) {
             traceError(e, tag, attributes ?: emptyMap())
             throw e
         } finally {
-            stopTrace(tag)
+            stopAsyncTrace(tag)
         }
     }
 
@@ -347,14 +432,14 @@ object AppTracer {
         attributes: Map<String, String>? = null,
         crossinline block: suspend () -> T
     ): T {
-        startTrace(tag, attributes)
+        startAsyncTrace(tag, attributes)
         return try {
             block()
         } catch (e: Exception) {
             traceError(e, tag, attributes ?: emptyMap())
             throw e
         } finally {
-            stopTrace(tag)
+            stopAsyncTrace(tag)
         }
     }
 
@@ -422,13 +507,30 @@ object AppTracer {
 
     private fun buildTag(tag: String, attributes: Map<String, String>?): String {
         if (attributes.isNullOrEmpty()) return tag
+        
+        // Android Trace.beginSection() has a limit of ~127 characters
+        val maxLength = 120
+        val baseTag = tag
+        
+        if (baseTag.length >= maxLength) {
+            return baseTag.take(maxLength)
+        }
+        
         val attrString = attributes.entries.joinToString(", ") { "${it.key}=${it.value}" }
-        return "$tag [$attrString]"
+        val fullTag = "$baseTag [$attrString]"
+        
+        return if (fullTag.length <= maxLength) {
+            fullTag
+        } else {
+            // If too long, just use the base tag
+            baseTag
+        }
     }
 
     fun clearAsyncTraces() {
         synchronized(traceLock) {
             asyncTraceCookies.clear()
+            asyncTraceFullTags.clear()
         }
     }
 
@@ -437,8 +539,12 @@ object AppTracer {
     }
 
     fun clearMetrics() {
-        traceMetrics.clear()
-        stateChanges.clear()
-        Log.i(TAG, "🧹 Metrics cleared")
+        synchronized(traceLock) {
+            traceMetrics.clear()
+            stateChanges.clear()
+            activeTraces.clear()
+            lastTraceTime.clear()
+            Log.i(TAG, "🧹 Metrics cleared")
+        }
     }
 }
